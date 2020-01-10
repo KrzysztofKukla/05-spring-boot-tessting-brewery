@@ -1,5 +1,9 @@
 package guru.springframework.brewery.web.controllers;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import guru.springframework.brewery.services.BeerService;
 import guru.springframework.brewery.web.model.BeerDto;
 import guru.springframework.brewery.web.model.BeerPagedList;
@@ -21,13 +25,16 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,7 +71,8 @@ class BeerControllerTest {
             .lastModifiedDate(OffsetDateTime.now())
             .build();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(beerController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(beerController).setMessageConverters(getJackson2HttpMessageConverter())
+            .build();
     }
 
     @Test
@@ -73,13 +81,18 @@ class BeerControllerTest {
 
     @Test
     void getBeerById() throws Exception {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
         BDDMockito.when(beerService.findBeerById(ArgumentMatchers.any())).thenReturn(beerDto1);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/beer/{beerId}", UUID.randomUUID()))
+        MvcResult mvcResult = mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/beer/{beerId}", UUID.randomUUID()))
             .andExpect(status().isOk())
-            .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
             .andExpect(jsonPath("$.id", Matchers.is(beerDto1.getId().toString())))
-            .andExpect(MockMvcResultMatchers.jsonPath("$.beerName", Matchers.is(beerDto1.getBeerName())));
+            .andExpect(jsonPath("$.beerName", Matchers.is(beerDto1.getBeerName())))
+            .andExpect(jsonPath("$.createdDate",
+                Matchers.is(dateTimeFormatter.format(beerDto1.getCreatedDate()))))
+            .andReturn();
+        System.out.println(mvcResult.getResponse().getContentAsString());
     }
 
     @DisplayName(value = "List operations-> ")
@@ -144,6 +157,19 @@ class BeerControllerTest {
             Assertions.assertNull(beerStyleCaptor.getValue());
         }
 
+    }
+
+    //usually this is auto configured by Spring Boot
+    //here we want to test it
+    //this is not the best way
+    private MappingJackson2HttpMessageConverter getJackson2HttpMessageConverter() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, true);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+        objectMapper.registerModule(new JavaTimeModule());
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
 }
