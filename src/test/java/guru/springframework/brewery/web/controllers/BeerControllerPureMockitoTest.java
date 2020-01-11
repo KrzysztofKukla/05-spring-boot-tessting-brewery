@@ -1,30 +1,36 @@
 package guru.springframework.brewery.web.controllers;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import guru.springframework.brewery.services.BeerService;
 import guru.springframework.brewery.web.model.BeerDto;
 import guru.springframework.brewery.web.model.BeerPagedList;
 import guru.springframework.brewery.web.model.BeerStyleEnum;
 import org.assertj.core.util.Lists;
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.BDDMockito;
 import org.mockito.Captor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -39,17 +45,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Krzysztof Kukla
  */
-//it bring up only slice of Spring Context, NOT full SpringContext
-// in this case it brings up Spring Context only for BeerController
-@WebMvcTest(controllers = BeerController.class)
-class BeerControllerTest {
+@ExtendWith(MockitoExtension.class)
+class BeerControllerPureMockitoTest {
 
-    //@MockBean works together with @WebMvcTest
-    @MockBean
+    @Mock
     private BeerService beerService;
 
-    //we allow Spring Context to inject that for us
-    @Autowired
+    @InjectMocks
+    private BeerController beerController;
+
     private MockMvc mockMvc;
 
     private BeerDto beerDto1;
@@ -66,12 +70,13 @@ class BeerControllerTest {
             .createdDate(OffsetDateTime.now())
             .lastModifiedDate(OffsetDateTime.now())
             .build();
+
+        mockMvc = MockMvcBuilders.standaloneSetup(beerController).setMessageConverters(getJackson2HttpMessageConverter())
+            .build();
     }
 
-    @AfterEach
-    void tearDown() {
-        //because beerService is component, so we need to reset that after each test
-        BDDMockito.reset(beerService);
+    @Test
+    void listBeers() {
     }
 
     @Test
@@ -154,17 +159,17 @@ class BeerControllerTest {
 
     }
 
-    //usually this is auto configured by Spring Boot, but to do this we need bring up Spring Context using @WebMvcTest
+    //usually this is auto configured by Spring Boot
     //here we want to test it
     //this is not the best way
-//    private MappingJackson2HttpMessageConverter getJackson2HttpMessageConverter() {
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-//        objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, true);
-//        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-//
-//        objectMapper.registerModule(new JavaTimeModule());
-//        return new MappingJackson2HttpMessageConverter(objectMapper);
-//    }
+    private MappingJackson2HttpMessageConverter getJackson2HttpMessageConverter() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, true);
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+        objectMapper.registerModule(new JavaTimeModule());
+        return new MappingJackson2HttpMessageConverter(objectMapper);
+    }
 
 }
