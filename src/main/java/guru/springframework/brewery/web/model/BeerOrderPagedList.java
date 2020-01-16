@@ -53,5 +53,4 @@ public class BeerOrderPagedList extends PageImpl<BeerOrderDto> {
     public BeerOrderPagedList(List<BeerOrderDto> content) {
         super(content);
     }
-
 }
