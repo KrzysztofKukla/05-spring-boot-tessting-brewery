@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @ExtendWith(WireMockExtension.class)
 class BeerOrderStatusChangeEventListenerTest {
 
-    //it will be manage by WireMockExtension, so it will sets up everything needed for WireMock
+    //it will be managed by WireMockExtension, so it will sets up everything needed for WireMock
     @Managed
     private WireMockServer wireMockServer = ManagedWireMockServer.with(WireMockConfiguration.wireMockConfig().dynamicPort());
 
@@ -38,10 +38,11 @@ class BeerOrderStatusChangeEventListenerTest {
     @Test
     void listen() {
         //here we define stub for wiremock for that 'url'
-        //we are configuring wiremockserver to accept post with 'update' url to return 'Ok' with it
+        //we are configuring wiremock server to accept post with 'update' url to return 'Ok' with it
         wireMockServer.stubFor(WireMock.post("/update").willReturn(WireMock.ok()));
 
         //here we simulate change status from NEW to READY
+        //this orderStatus change triggers BeerOrderStatusChangeEventListener with '/update'
         BeerOrder beerOrder = BeerOrder.builder()
             .orderStatus(OrderStatusEnum.READY)
             .orderStatusCallbackUrl("http://localhost:" + wireMockServer.port() + "/update")
@@ -51,6 +52,7 @@ class BeerOrderStatusChangeEventListenerTest {
         BeerOrderStatusChangeEvent event = new BeerOrderStatusChangeEvent(beerOrder, OrderStatusEnum.NEW);
         listener.listen(event);
 
+        //here we verify if post with '/update' url was in fact called exactly once
         WireMock.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/update")));
     }
 

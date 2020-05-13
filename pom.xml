@@ -107,7 +107,7 @@
         </dependency>
     </dependencies>
 
-    <!-- external repository for wiremock -->
+    <!-- external repository required for wiremock dependency -->
     <repositories>
         <repository>
             <id>jitpack.io</id>
